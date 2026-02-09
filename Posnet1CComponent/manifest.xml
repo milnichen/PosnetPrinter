@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bundle xmlns="http://v8.1c.ru/8.2/addin/bundle">
+    <component os="Windows" arch="i386" path="Posnet_x86.dll" type="com" />
+    <component os="Windows" arch="x86_64" path="Posnet_x64.dll" type="com" />
+</bundle>

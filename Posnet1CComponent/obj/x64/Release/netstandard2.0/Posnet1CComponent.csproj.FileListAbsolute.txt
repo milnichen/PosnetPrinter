@@ -1,0 +1,10 @@
+C:\Study\PosnetPrinter\Posnet1CComponent\bin\x64\Release\netstandard2.0\Posnet1CComponent.deps.json
+C:\Study\PosnetPrinter\Posnet1CComponent\bin\x64\Release\netstandard2.0\Posnet1CComponent.dll
+C:\Study\PosnetPrinter\Posnet1CComponent\bin\x64\Release\netstandard2.0\Posnet1CComponent.pdb
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.csproj.AssemblyReference.cache
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.GeneratedMSBuildEditorConfig.editorconfig
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.AssemblyInfoInputs.cache
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.AssemblyInfo.cs
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.csproj.CoreCompileInputs.cache
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.dll
+C:\Study\PosnetPrinter\Posnet1CComponent\obj\x64\Release\netstandard2.0\Posnet1CComponent.pdb

@@ -1,0 +1,24 @@
+{
+  "runtimeTarget": {
+    "name": ".NETStandard,Version=v2.0/",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETStandard,Version=v2.0": {},
+    ".NETStandard,Version=v2.0/": {
+      "Posnet1CComponent/1.0.0": {
+        "runtime": {
+          "Posnet1CComponent.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Posnet1CComponent/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

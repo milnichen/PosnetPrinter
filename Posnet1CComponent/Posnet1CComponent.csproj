@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <Platforms>x86;x64</Platforms>
+    <LangVersion>latest</LangVersion>
+    
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net" />
+    <Reference Include="System.Runtime.InteropServices" />
+    <Reference Include="System.Text" /> 
+  </ItemGroup>
+</Project>
