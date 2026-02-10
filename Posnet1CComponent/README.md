@@ -1,0 +1,2 @@
+# External component for working with the Posnet Thermal XL2 fiscal printer
+**Opis:** A component for sending print commands from 1C to a fiscal printer by creating a TСP connection and receiving a response. Both x64 and x86 versions are compiled in the bin directory.
