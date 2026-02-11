@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using System.Text;
 using System.Linq;
+using System.Globalization;
 
 namespace Posnet1CComponent
 {
@@ -23,11 +24,152 @@ namespace Posnet1CComponent
     [ProgId("AddIn.PosnetPrinter")]
     public class PosnetPrinter : IPosnetPrinter
     {
-        private static readonly ushort[] crcTable = new ushort[256];
+        private const int ConnectTimeoutMs = 3000;
+        private const int SendTimeoutMs = 3000;
+        private const int ReceiveTimeoutMs = 5000;
 
-        static PosnetPrinter()
+        public string SendCommand(string ip, int port, string command)
         {
-            ushort poly = 0x1021;
+            try
+            {
+                // Базова валідація параметрів
+                if (string.IsNullOrWhiteSpace(ip))
+                    return "ERR_PARAM_IP";
+
+                if (port <= 0 || port > 65535)
+                    return "ERR_PARAM_PORT";
+
+                if (command == null)
+                    return "ERR_PARAM_COMMAND";
+
+                Encoding posnetEncoding = Encoding.GetEncoding(1250);
+                byte[] fullFrame = BuildFrame(command, posnetEncoding);
+
+                using (TcpClient client = new TcpClient())
+                {
+                    // Таймаут на подключение
+                    var connectResult = client.BeginConnect(ip, port, null, null);
+                    if (!connectResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeoutMs)))
+                        return "ERR_TIMEOUT_CONNECT";
+
+                    client.EndConnect(connectResult); 
+                     
+                    client.SendTimeout = SendTimeoutMs;
+                    client.ReceiveTimeout = ReceiveTimeoutMs;
+
+                    using (NetworkStream stream = client.GetStream())
+                    {
+                        stream.Write(fullFrame, 0, fullFrame.Length);
+                        stream.Flush();
+
+                        string response = ReadAndParseResponse(stream, posnetEncoding);
+                        if (response != null)
+                            return response;
+                    }
+                }
+                return "ERR_NO_RESPONSE";
+            }
+            catch (Exception ex)
+            {
+                return "ERR_SYSTEM: " + ex.Message;
+            }
+        }
+
+        /// <summary>
+        /// Формирует кадр Posnet: STX + BODY (command + ETX) + CRC(HEX4)
+        /// </summary>
+        private static byte[] BuildFrame(string command, Encoding encoding)
+        {
+            byte[] stx = { 0x02 };
+            string bodyStr = command + (char)0x03; // ETX
+            byte[] body = encoding.GetBytes(bodyStr);
+
+            ushort crc = PosnetCrc16.Compute(body);
+            byte[] crcBytes = Encoding.ASCII.GetBytes(crc.ToString("X4"));
+
+            return stx.Concat(body).Concat(crcBytes).ToArray();
+        }
+
+        /// <summary>
+        /// Читает ответ от принтера, обрабатывая ACK/NAK и полный кадр STX...ETX+CRC.
+        /// Возвращает строку ответа или null, если данных нет.
+        /// </summary>
+        private static string ReadAndParseResponse(NetworkStream stream, Encoding encoding)
+        {
+            var buffer = new byte[512];
+            var accumulated = new System.Collections.Generic.List<byte>();
+
+            while (true)
+            {
+                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                if (bytesRead <= 0)
+                    break;
+
+                accumulated.AddRange(buffer.Take(bytesRead));
+
+                if (accumulated.Count == 0)
+                    continue;
+
+                byte first = accumulated[0];
+
+                // ACK / NAK
+                if (first == 0x06)
+                    return "OK";
+
+                if (first == 0x15)
+                    return "ERR_CRC";
+
+                // Кадр STX ... ETX + CRC(4 байта в HEX)
+                if (first == 0x02)
+                {
+                    byte[] current = accumulated.ToArray();
+                    int etxIndex = Array.IndexOf(current, (byte)0x03, 1); // ищем ETX после STX
+                    if (etxIndex > 1 && current.Length >= etxIndex + 1 + 4)
+                    {
+                        // Есть ETX и как минимум 4 байта CRC
+                        int crcStart = etxIndex + 1;
+                        string crcHex = Encoding.ASCII.GetString(current, crcStart, 4);
+
+                        if (!ushort.TryParse(crcHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort crcReceived))
+                        {
+                            return "ERR_CRC_FORMAT";
+                        }
+
+                        // Тело для проверки CRC: от индекса 1 (после STX) включительно до ETX включительно
+                        int bodyLength = etxIndex; // с 1 до etxIndex включительно => etxIndex байт
+                        byte[] bodyWithEtx = new byte[bodyLength];
+                        Array.Copy(current, 1, bodyWithEtx, 0, bodyLength);
+
+                        ushort crcCalculated = PosnetCrc16.Compute(bodyWithEtx);
+                        if (crcCalculated != crcReceived)
+                        {
+                            return "ERR_CRC_RESPONSE";
+                        }
+
+                        // Строка между STX и ETX (без ETX)
+                        string text = encoding.GetString(current, 1, etxIndex - 1).Trim();
+                        return text;
+                    }
+                }
+            }
+
+            if (accumulated.Count > 0)
+            {
+                // Непротокольный/частичный ответ — возвращаем как есть в CP1250
+                return encoding.GetString(accumulated.ToArray(), 0, accumulated.Count).Trim();
+            }
+
+            return null;
+        }
+    }
+
+    internal static class PosnetCrc16
+    {
+        private static readonly ushort[] CrcTable = new ushort[256];
+
+        static PosnetCrc16()
+        {
+            const ushort poly = 0x1021;
             for (ushort i = 0; i < 256; i++)
             {
                 ushort value = 0;
@@ -40,74 +182,22 @@ namespace Posnet1CComponent
                         value = (ushort)(value << 1);
                     temp <<= 1;
                 }
-                crcTable[i] = value;
+                CrcTable[i] = value;
             }
         }
 
-        public string SendCommand(string ip, int port, string command)
+        public static ushort Compute(byte[] data)
         {
-            try
+            if (data == null || data.Length == 0)
+                return 0;
+
+            ushort crc = 0xFFFF;
+            foreach (byte b in data)
             {
-                Encoding posnetEncoding = Encoding.GetEncoding(1250);
-                
-                byte[] stx = { 0x02 };
-                string bodyStr = command + (char)0x03;
-                byte[] body = posnetEncoding.GetBytes(bodyStr);
-                
-                // Расчет CRC16
-                ushort crc = 0xFFFF;
-                foreach (byte b in body)
-                {
-                    crc = (ushort)((crc << 8) ^ crcTable[((crc >> 8) ^ b) & 0xFF]);
-                }
-                byte[] crcBytes = Encoding.ASCII.GetBytes(crc.ToString("X4"));
-
-                byte[] fullFrame = stx.Concat(body).Concat(crcBytes).ToArray();
-
-                using (TcpClient client = new TcpClient())
-                {
-                    // Таймаут на подключение
-                    var connectResult = client.BeginConnect(ip, port, null, null);
-                    if (!connectResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(3))) 
-                        return "ERR_TIMEOUT_CONNECT";
-
-                    client.EndConnect(connectResult); 
-                     
-                    client.SendTimeout = 3000;
-                    client.ReceiveTimeout = 5000;
-
-                    using (NetworkStream stream = client.GetStream())
-                    {
-                        stream.Write(fullFrame, 0, fullFrame.Length);
-                        stream.Flush();
-
-                        byte[] buffer = new byte[2048];
-                        int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                        
-                        if (bytesRead > 0)
-                        {
-                            if (buffer[0] == 0x06) return "OK";
-                            if (buffer[0] == 0x15) return "ERR_CRC";
-                            if (buffer[0] == 0x02) // Начинается с STX
-                            {
-                                // Ищем конец текста (ETX)
-                                int etxIndex = Array.IndexOf(buffer, (byte)0x03, 0, bytesRead);
-                                if (etxIndex > 1)
-                                {
-                                    // Извлекаем строку между STX (индекс 0) и ETX (etxIndex)
-                                    return posnetEncoding.GetString(buffer, 1, etxIndex - 1).Trim();
-                                }
-                            }
-                            return Encoding.GetEncoding(1250).GetString(buffer, 0, bytesRead).Trim();
-                        }
-                    }
-                }
-                return "ERR_NO_RESPONSE";
+                crc = (ushort)((crc << 8) ^ CrcTable[((crc >> 8) ^ b) & 0xFF]);
             }
-            catch (Exception ex)
-            {
-                return "ERR_SYSTEM: " + ex.Message;
-            }
+
+            return crc;
         }
     }
 }

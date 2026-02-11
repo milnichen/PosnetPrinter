@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "WMoYfPrS4KQ=",
+  "dgSpecHash": "Ft7uCO9/wbE=",
   "success": true,
   "projectFilePath": "C:\\Study\\PosnetPrinter\\Posnet1CComponent\\Posnet1CComponent.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\a.mylnychenko\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
-    "C:\\Users\\a.mylnychenko\\.nuget\\packages\\netstandard.library\\2.0.3\\netstandard.library.2.0.3.nupkg.sha512"
+    "C:\\Users\\a.mylnychenko\\.nuget\\packages\\microsoft.netframework.referenceassemblies\\1.0.3\\microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",
+    "C:\\Users\\a.mylnychenko\\.nuget\\packages\\microsoft.netframework.referenceassemblies.net472\\1.0.3\\microsoft.netframework.referenceassemblies.net472.1.0.3.nupkg.sha512"
   ],
   "logs": []
 }
